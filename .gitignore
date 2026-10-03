@@ -1,0 +1,4 @@
+cities.csv
+best_tour.csv
+tsp_mpi
+*.o
