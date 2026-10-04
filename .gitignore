@@ -1,4 +1,6 @@
 cities.csv
 best_tour.csv
 tsp_mpi
+tsp_seq
+*.exe
 *.o
