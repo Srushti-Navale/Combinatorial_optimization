@@ -383,7 +383,58 @@ All tested tours were successfully validated.
 The 8,000-city instance required approximately **316 seconds (5.3 minutes)** on the test system. This demonstrates the increasing computational cost of the sequential approach and motivates the use of parallel execution for larger problem instances.
 
 ---
+# Parallel Benchmarking
 
+The parallel OpenMP solver was evaluated on progressively larger problem sizes using the same `cities.csv` dataset and different OpenMP thread configurations.
+
+All benchmark runs were performed using the parallel implementation with:
+
+* Multi-start Nearest Neighbor construction
+* 2-Opt local search
+* Precomputed Euclidean distance matrix
+* Dynamic OpenMP scheduling using `schedule(dynamic, 1)`
+* Thread-safe global best tour tracking
+
+| Number of Cities | Starts | Active Threads | Final 2-Opt Length | Execution Time (s) | Discovered By | Valid Tour |
+| ---------------: | -----: | -------------: | -----------------: | -----------------: | :------------ | :--------: |
+|              500 |     24 |              4 |          65,188.04 |           0.023600 | Thread 0      |     YES    |
+|              500 |     24 |              8 |          65,188.04 |           0.023000 | Thread 0      |     YES    |
+|              500 |     24 |             12 |          65,188.04 |           0.039100 | Thread 2      |     YES    |
+|            1,000 |     24 |              4 |          92,258.78 |           0.077600 | Thread 3      |     YES    |
+|            1,000 |     24 |              8 |          92,258.78 |           0.068700 | Thread 3      |     YES    |
+|            1,000 |     24 |             12 |          92,258.78 |           0.061600 | Thread 3      |     YES    |
+|            2,000 |     24 |              4 |         128,848.39 |           0.545000 | Thread 3      |     YES    |
+|            2,000 |     24 |              8 |         128,848.39 |           0.433300 | Thread 4      |     YES    |
+|            2,000 |     24 |             12 |         128,848.39 |           0.432300 | Thread 1      |     YES    |
+|            5,000 |     24 |              4 |         200,603.03 |           6.452300 | Thread 0      |     YES    |
+|            5,000 |     24 |              8 |         200,603.03 |           4.342500 | Thread 3      |     YES    |
+|            5,000 |     24 |             12 |         200,603.03 |           4.052300 | Thread 2      |     YES    |
+|            8,000 |     24 |              4 |         253,147.21 |          26.388300 | Thread 3      |     YES    |
+|            8,000 |     24 |              8 |         253,147.21 |          19.649600 | Thread 2      |     YES    |
+|            8,000 |     24 |             12 |         253,147.21 |          17.227600 | Thread 2      |     YES    |
+
+### Observations
+
+The benchmark results show that the parallel solver reduces execution time as the number of OpenMP threads increases, particularly for larger problem instances.
+
+The multi-start approach evaluates multiple starting cities independently, allowing different threads to explore alternative initial tours and retain the best solution found.
+
+For example:
+
+* At 500 cities, the parallel solver obtained a final tour length of `65,188.04` in approximately `0.023` seconds using 8 threads.
+* At 5,000 cities, execution time decreased from `6.452300` seconds with 4 threads to `4.052300` seconds with 12 threads.
+* At 8,000 cities, execution time decreased from `26.388300` seconds with 4 threads to `17.227600` seconds with 12 threads.
+
+The parallel multi-start search also produced shorter tours than the sequential single-start implementation:
+
+* At 500 cities, the final tour length improved from `67,845.87` sequentially to `65,188.04` using the parallel multi-start approach.
+* At 8,000 cities, the final tour length improved from `254,469.54` sequentially to `253,147.21` using the parallel implementation.
+
+All tested parallel tours were successfully validated as valid Hamiltonian cycles.
+
+The results demonstrate that OpenMP parallelism provides significant runtime reduction for larger TSP instances while the multi-start strategy can improve solution quality by exploring multiple starting points concurrently.
+
+---
 # Sequential vs Parallel Evaluation
 
 The sequential implementation serves as the baseline for evaluating the performance of the OpenMP implementation.
