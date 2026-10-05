@@ -3,4 +3,6 @@ best_tour.csv
 tsp_mpi
 tsp_seq
 *.exe
+*.otsp_omp
+tsp_seq
 *.o
