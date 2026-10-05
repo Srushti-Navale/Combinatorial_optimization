@@ -7,6 +7,7 @@
 
 #define DEFAULT_NUM_CITIES 500
 #define DEFAULT_STARTS 64
+#define MAX_SAFE_CITIES 8000
 #define MAX_LINE_LEN 256
 
 /* Data structures matching the project format */
@@ -218,6 +219,18 @@ int main(int argc, char *argv[])
         target_cities = atoi(argv[1]);
     }
 
+    /* Hardware Safety Guard: prevent crash from excessive RAM allocation */
+    if (target_cities > MAX_SAFE_CITIES)
+    {
+        double required_ram_mb = ((double)target_cities * target_cities * sizeof(double)) / (1024.0 * 1024.0);
+        fprintf(stderr, "\n[ERROR] Requested %d cities exceeds hardware safety limit (%d cities)!\n", 
+                target_cities, MAX_SAFE_CITIES);
+        fprintf(stderr, "[ERROR] Storing an O(N^2) distance matrix for %d cities requires approx %.2f MB (%.2f GB) RAM.\n", 
+                target_cities, required_ram_mb, required_ram_mb / 1024.0);
+        fprintf(stderr, "[ERROR] Aborting run to protect system stability.\n\n");
+        return 1;
+    }
+    
     if (argc >= 3)
     {
         total_starts = atoi(argv[2]);
