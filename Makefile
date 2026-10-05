@@ -1,17 +1,24 @@
 CC = gcc
-MPICC = mpicc
-CFLAGS = -O3 -Wall
+CFLAGS = -O3 -Wall -march=native
+OMPFLAGS = -fopenmp
 LIBS = -lm
 
-SEQ_SOURCES = tsp_seq.c data_loader.c subset.c tsp_utils.c nearest_neighbor.c two_opt.c
+SEQ_SOURCES = sequential/tsp_seq.c \
+              sequential/data_loader.c \
+              sequential/subset.c \
+              sequential/tsp_utils.c \
+              sequential/nearest_neighbor.c \
+              sequential/two_opt.c
 
-all: tsp_seq tsp_mpi
-	
+OMP_SOURCES = parallel/tsp_omp.c
+
+all: tsp_seq tsp_omp
+
 tsp_seq: $(SEQ_SOURCES)
-	$(CC) $(CFLAGS) $(SEQ_SOURCES) -o tsp_seq $(LIBS)
+	$(CC) $(CFLAGS) -Isequential $(SEQ_SOURCES) -o tsp_seq $(LIBS)
 
-tsp_mpi: tsp_mpi.c
-	$(MPICC) $(CFLAGS) tsp_mpi.c -o tsp_mpi $(LIBS)
+tsp_omp: $(OMP_SOURCES)
+	$(CC) $(CFLAGS) $(OMPFLAGS) $(OMP_SOURCES) -o tsp_omp $(LIBS)
 
 clean:
-	rm -f tsp_seq tsp_mpi best_tour.csv
+	rm -f tsp_seq tsp_omp *.o best_tour*.csv
