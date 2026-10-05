@@ -46,6 +46,10 @@ int main(int argc, char *argv[])
         return 1;
     }
 
+    printf("============================================================\n");
+    printf("              SEQUENTIAL TSP (2-OPT)\n");
+    printf("============================================================\n");
+
     printf("Total cities in dataset: %d\n", total_cities);
     printf("Cities used: %d\n", n);
 
@@ -60,7 +64,8 @@ int main(int argc, char *argv[])
     }
 
     /* Start timing */
-    clock_t start = clock();
+    struct timespec start, end;
+    clock_gettime(CLOCK_MONOTONIC, &start);
 
     /* Step 1: Nearest Neighbor */
     if (!nearest_neighbor(cities, n, tour))
@@ -81,10 +86,11 @@ int main(int argc, char *argv[])
         calculate_tour_length(cities, tour, n);
 
     /* Stop timing */
-    clock_t end = clock();
+    clock_gettime(CLOCK_MONOTONIC, &end);
 
     double elapsed =
-        (double)(end - start) / CLOCKS_PER_SEC;
+        (end.tv_sec - start.tv_sec) +
+        (end.tv_nsec - start.tv_nsec) / 1e9;
 
     /* Validate final tour */
     int valid = validate_tour(tour, n);
@@ -120,11 +126,11 @@ int main(int argc, char *argv[])
 
         for (int i = 0; i < n; i++)
         {
-            fprintf(out, "%d,%I64d\n", i, cities[tour[i]].city_id);
+            fprintf(out, "%d,%lld\n", i, cities[tour[i]].city_id);
         }
 
         /* Return to the starting city */
-        fprintf(out, "%d,%I64d\n",
+        fprintf(out, "%d,%lld\n",
                 n,
                 cities[tour[0]].city_id);
 

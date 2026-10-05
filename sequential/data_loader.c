@@ -33,7 +33,7 @@ int load_cities(const char *filename, City **cities)
 
         City city;
 
-        if (sscanf(line, "%I64d,%lf,%lf",
+        if (sscanf(line, "%lld,%lf,%lf",
                    &city.city_id,
                    &city.x,
                    &city.y) != 3) {
