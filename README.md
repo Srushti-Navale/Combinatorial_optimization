@@ -347,7 +347,133 @@ export OMP_NUM_THREADS=8
 These configurations can be used to measure the **strong scaling** of the parallel implementation.
 
 ---
+## Dynamic Memory Management & Leak Verification
 
+To ensure memory safety and prevent resource leaks during both sequential and multi-threaded execution, the OpenMP TSP solver was tested using two industry-standard memory analysis tools:
+
+* **GCC AddressSanitizer (ASan)**
+* **Valgrind Memcheck**
+
+These tools were used to verify heap allocation, deallocation, buffer safety, and memory behavior during parallel execution.
+
+### 1. Memory Management Strategy
+
+The solver dynamically allocates memory for both shared data structures and thread-private working buffers.
+
+#### Shared Memory
+
+The following structures are allocated once and shared across the OpenMP threads:
+
+* `cities` – stores city coordinates
+* `dist_matrix` – stores the precomputed distance matrix
+* `global_best_tour` – stores the best tour found by the solver
+
+#### Thread-Private Memory
+
+Each OpenMP worker thread maintains its own working buffers:
+
+* `local_tour` – stores the thread's current tour
+* `local_visited` – tracks visited cities
+
+Thread-private buffers are allocated inside the OpenMP parallel region and released using the corresponding `free()` calls. Shared memory is also explicitly released before program termination.
+
+---
+
+### 2. AddressSanitizer (ASan) Verification
+
+**AddressSanitizer (ASan)** was used to detect memory-related errors such as:
+
+* Heap buffer overflows
+* Heap-use-after-free
+* Invalid memory accesses
+* Memory leaks through LeakSanitizer
+
+#### Compilation
+
+```bash
+gcc -O1 -g -fsanitize=address -fopenmp parallel/tsp_omp.c -o tsp_omp_asan -lm
+```
+
+#### Execution
+
+```bash
+export OMP_NUM_THREADS=4
+./tsp_omp_asan 100 4 cities.csv
+```
+
+#### Result
+
+The program completed successfully without any AddressSanitizer runtime errors or LeakSanitizer leak reports. The process terminated normally with exit code `0`.
+
+**AddressSanitizer Verification:**
+
+![AddressSanitizer Verification](images/asan_result.png)
+
+> **Result:** No heap-buffer-overflow, use-after-free, or memory leak diagnostics were reported during the verification run.
+
+---
+
+### 3. Valgrind Memcheck Verification
+
+**Valgrind Memcheck** was used to perform a detailed analysis of dynamic memory allocation and deallocation.
+
+#### Compilation
+
+```bash
+gcc -g -fopenmp parallel/tsp_omp.c -o tsp_omp_valgrind -lm
+```
+
+#### Execution
+
+```bash
+export OMP_NUM_THREADS=2
+valgrind --leak-check=full --show-leak-kinds=all --track-origins=yes ./tsp_omp_valgrind 50 2 cities.csv
+```
+
+#### Valgrind Results
+
+The Valgrind analysis reported:
+
+```text
+LEAK SUMMARY:
+    definitely lost: 0 bytes in 0 blocks
+    indirectly lost: 0 bytes in 0 blocks
+    possibly lost: 288 bytes in 1 blocks
+    still reachable: 2,128 bytes in 5 blocks
+    suppressed: 0 bytes in 0 blocks
+```
+
+**Valgrind Memcheck Output — Screenshot 1:**
+
+![Valgrind Memcheck Result 1](images/valgrind_result1.png)
+
+![Valgrind Memcheck Result 2](images/valgrind_result2.png)
+
+#### Verification Analysis
+
+* **Definitely lost: 0 bytes** — No memory blocks were confirmed as leaked or orphaned.
+* **Indirectly lost: 0 bytes** — No indirectly leaked memory was detected.
+* **Possibly lost: 288 bytes** — A small amount of memory was reported as possibly lost by Valgrind, which can occur with thread/runtime-related allocations.
+* **Still reachable: 2,128 bytes** — Memory remained referenced at process termination and is not classified as definitely lost.
+* **Suppressed: 0 bytes** — No errors were suppressed during the analysis.
+
+The **0 bytes definitely lost** result provides the primary indication that no definite application-level memory leaks were detected during the test.
+
+---
+
+### 4. Memory Verification Summary
+
+| Tool              | Configuration                  | Result                                   |
+| ----------------- | ------------------------------ | ---------------------------------------- |
+| AddressSanitizer  | 4 OpenMP threads, 100-city run | No runtime memory errors or leak reports |
+| Valgrind Memcheck | 2 OpenMP threads, 50-city run  | 0 bytes definitely lost                  |
+| Valgrind          | Indirectly lost                | 0 bytes                                  |
+| Valgrind          | Possibly lost                  | 288 bytes                                |
+| Valgrind          | Still reachable                | 2,128 bytes                              |
+
+Overall, the memory audit found **no definite application-level memory leaks** and confirmed correct dynamic memory handling during multi-threaded execution.
+
+---
 # Sequential Benchmarking
 
 The sequential solver was evaluated on progressively larger problem sizes using the same `cities.csv` dataset.
