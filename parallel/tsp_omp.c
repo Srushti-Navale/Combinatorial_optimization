@@ -27,7 +27,13 @@ static inline double euclidean_distance(const City *a, const City *b)
     return sqrt(dx * dx + dy * dy);
 }
 
-/* Nearest Neighbor Constructive Heuristic */
+/* Nearest Neighbor Constructive Heuristic 
+ * Note on Tie-Breaking:
+ * If candidate cities have the exact same distance (within 1e-9 tolerance),
+ * the heuristic selects the lower city index deterministically.
+ * Any suboptimal paths introduced by ties are subsequently untangled
+ * by the 2-Opt local search refinement phase.
+ */
 int nearest_neighbor(int start_city, int n, const double *dist_matrix, int *tour, unsigned char *visited)
 {
     if (dist_matrix == NULL || tour == NULL || visited == NULL || n <= 0)
@@ -54,7 +60,9 @@ int nearest_neighbor(int start_city, int n, const double *dist_matrix, int *tour
             {
                 double d = row[candidate];
 
-                if (d < min_dist)
+                /* Strict less-than with floating-point epsilon provides deterministic 
+                   tie-breaking while rejecting equal-distance alternatives */
+                if (d < min_dist - 1e-9)
                 {
                     min_dist = d;
                     best_next = candidate;
@@ -223,14 +231,14 @@ int main(int argc, char *argv[])
     if (target_cities > MAX_SAFE_CITIES)
     {
         double required_ram_mb = ((double)target_cities * target_cities * sizeof(double)) / (1024.0 * 1024.0);
-        fprintf(stderr, "\n[ERROR] Requested %d cities exceeds hardware safety limit (%d cities)!\n", 
+        fprintf(stderr, "\n[ERROR] Problem size %d exceeds hardware safety limit (%d cities)!\n", 
                 target_cities, MAX_SAFE_CITIES);
         fprintf(stderr, "[ERROR] Storing an O(N^2) distance matrix for %d cities requires approx %.2f MB (%.2f GB) RAM.\n", 
                 target_cities, required_ram_mb, required_ram_mb / 1024.0);
         fprintf(stderr, "[ERROR] Aborting run to protect system stability.\n\n");
         return 1;
     }
-    
+
     if (argc >= 3)
     {
         total_starts = atoi(argv[2]);
@@ -255,6 +263,22 @@ int main(int argc, char *argv[])
         total_starts = num_cities;
     }
 
+    /* Thread Pool & Idle Thread Safety Guard:
+     * If the user or environment specifies more threads than total tasks (total_starts),
+     * extra threads would sit completely idle.
+     * We clamp the active thread count to prevent idle thread stack allocation and context switching overhead.
+     */
+    int requested_threads = omp_get_max_threads();
+    int active_threads = requested_threads;
+
+    if (active_threads > total_starts)
+    {
+        fprintf(stderr, "[NOTICE] Requested %d threads, but only %d starts exist. Clamping active threads to %d to avoid idle threads.\n",
+                requested_threads, total_starts, total_starts);
+        active_threads = total_starts;
+        omp_set_num_threads(active_threads);
+    }
+
     /* Allocate distance matrix in shared memory */
     double *dist_matrix = (double *)malloc((size_t)num_cities * num_cities * sizeof(double));
 
@@ -274,7 +298,6 @@ int main(int argc, char *argv[])
         }
     }
 
-    int num_threads = omp_get_max_threads();
     long long edges = (long long)num_cities * (num_cities - 1) / 2;
 
     printf("===================================================================================\n");
@@ -282,7 +305,7 @@ int main(int argc, char *argv[])
     printf("===================================================================================\n");
     printf(" Dataset Loaded        : Kaggle Traveling Santa (%s)\n", csv_path);
     printf(" Problem Size          : %d Cities (%lld pairwise edge distances)\n", num_cities, edges);
-    printf(" Active OpenMP Threads : %d Host Threads\n", num_threads);
+    printf(" Active OpenMP Threads : %d Threads (Requested: %d)\n", active_threads, requested_threads);
     printf(" Multi-Start Strategy  : %d NN Restarts (Dynamic Work Queue)\n", total_starts);
     printf("===================================================================================\n\n");
     printf(" --- [LIVE PROGRESS MONITOR: LOCAL MILESTONES DISCOVERED] -------------------------\n");
@@ -379,7 +402,7 @@ int main(int argc, char *argv[])
     printf("                            FINAL BENCHMARK SCORECARD                              \n");
     printf("===================================================================================\n");
     printf(" Optimal Tour Cost Found : %.2f units\n", global_best_cost);
-    printf(" Discovered By           : Thread %d (out of %d active threads)\n", best_thread_id, num_threads);
+    printf(" Discovered By           : Thread %d (out of %d active threads)\n", best_thread_id, active_threads);
     printf(" Total Execution Time    : %.4f seconds\n", elapsed_time);
     printf(" Memory Paradigm         : Shared Memory Multi-Threading (Zero Data Duplication)\n");
     printf(" Output Route File       : best_tour_omp.csv (Verified Hamiltonian Cycle)\n");
