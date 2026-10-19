@@ -690,11 +690,11 @@ The project evaluates the sequential and OpenMP implementations on city subsets 
 
 **Sequential execution time**
 
-![Sequential TSP execution time](benchmarking\graphs\Figure_1_Sequential_Execution_Time.png)
+![Sequential TSP execution time](benchmarking/graphs/Figure_1_Sequential_Execution_Time.png)
 
 **OpenMP execution time**
 
-![OpenMP TSP execution time](benchmarking\graphs\Figure_2_OpenMP_Execution_Time.png)
+![OpenMP TSP execution time](benchmarking/graphs/Figure_2_OpenMP_Execution_Time.png)
 
 **OpenMP thread scaling**
 
@@ -711,7 +711,6 @@ The project evaluates the sequential and OpenMP implementations on city subsets 
 * [Sequential measurements (CSV)](benchmarking/results/sequential_results.csv)
 * [OpenMP measurements (CSV)](benchmarking/results/openmp_results.csv)
 * [Thread-scaling metrics (CSV)](benchmarking/results/scaling_results.csv)
-* [Full project report](report/TSP_Combinatorial_Optimization_Report.pdf)
 
 The graphs can be regenerated from the recorded CSV files using `benchmarking/scripts/plot_results.py`; rerunning the solver is not required.
 
