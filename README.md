@@ -187,7 +187,10 @@ This prevents race conditions while updating the global best tour.
 
 ---
 
-# Prerequisites & Setup
+# Developer Manual
+
+This section is for developers who need to set up, build, test, or maintain the project. The repository structure and algorithm design are documented above in **Repository Architecture** and **Algorithmic Details & Methodology**; the sections below focus on the development workflow.
+
 
 The project requires:
 
@@ -217,9 +220,46 @@ Combinatorial_optimization/
 
 The `cities.csv` dataset is not included in the Git repository because of its size and is expected to be downloaded separately from the Kaggle Traveling Santa 2018 – Prime Paths competition.
 
+
+### Build and test
+
+Build both solvers using the repository Makefile:
+
+```bash
+make
+```
+
+Remove generated binaries and tour output files before a clean rebuild:
+
+```bash
+make clean
+make
+```
+
+The standalone unit tests link against the sequential modules. Run them from the project root after placing `cities.csv` there:
+
+```bash
+S="sequential/data_loader.c sequential/subset.c sequential/tsp_utils.c sequential/nearest_neighbor.c sequential/two_opt.c"
+for t in utils subset nn two_opt loader; do
+    gcc -Isequential "tests/test_$t.c" $S -o "test_$t" -lm && "./test_$t"
+done
+```
+
+`tests/test_loader.c` uses the Windows-specific format specifier `%I64d` mentioned in the report; on Linux/GCC, change it to `%lld` if the city ID output is garbled or a format warning appears.
+
+### Maintenance considerations
+
+- The parallel solver stores an `N × N` matrix of doubles, requiring approximately `8 × N²` bytes before other allocations. Its current safe-size guard is 8,000 cities; do not raise it without checking available RAM.
+- The parallel 2-Opt implementation is capped at 100 passes. Increasing this cap may improve a tour but can increase runtime.
+- The sequential and parallel implementations use different 2-Opt scan strategies and floating-point tolerances, so compare their results as practical performance measurements rather than a perfectly controlled speedup.
+
+
 ---
 
-# Compilation & Execution
+# User Manual
+
+Use this section to run the existing solvers and interpret their output. It assumes the project has been built using the commands in the **Developer Manual** and that `cities.csv` is present in the project root. No separate application or GUI is required.
+
 
 ## 1. Sequential Solver (`tsp_seq`)
 
@@ -301,7 +341,7 @@ gcc -O3 -march=native -fopenmp parallel/tsp_omp.c -o tsp_omp -lm
 | Parameter | Default | Description |
 |---|---:|---|
 | `NUM_CITIES` | 500 | Number of cities to evaluate |
-| `NUM_STARTS` | 64 | Number of starting cities used for multi-start search |
+| `NUM_STARTS` | 64 | Number of starting cities used for multi-start search; the reported benchmark experiments used 24 |
 | `CSV_PATH` | cities.csv | Path to the dataset |
 
 ### Example
@@ -312,7 +352,7 @@ gcc -O3 -march=native -fopenmp parallel/tsp_omp.c -o tsp_omp -lm
 
 ---
 
-# OpenMP Thread Scaling
+## OpenMP Thread Scaling
 
 The number of OpenMP threads can be controlled using the `OMP_NUM_THREADS` environment variable.
 
