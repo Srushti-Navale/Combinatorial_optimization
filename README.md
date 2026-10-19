@@ -670,6 +670,53 @@ The tests cover:
 
 ---
 
+## Benchmarking and Performance Analysis
+
+The project evaluates the sequential and OpenMP implementations on city subsets ranging from 500 to 8,000 cities. The recorded experiments compare execution time, OpenMP thread scaling, and final tour length.
+
+### Key Results
+
+| Cities | Sequential time (1 start) | OpenMP time (24 starts, 12 threads) |
+| -----: | ------------------------: | ----------------------------------: |
+|    500 |                  0.0789 s |                            0.0391 s |
+|  1,000 |                  0.6848 s |                            0.0616 s |
+|  2,000 |                  4.6376 s |                            0.4323 s |
+|  5,000 |                 55.8867 s |                            4.0523 s |
+|  8,000 |                316.4165 s |                           17.2276 s |
+
+**Interpretation:** These measurements show the practical runtime difference between the tested configurations, but they are not a like-for-like speedup comparison. The sequential version uses one start and computes distances on demand, while the OpenMP version evaluates 24 starts using a precomputed distance matrix. Matrix construction is excluded from the reported OpenMP search time.
+
+### Visualizations
+
+**Sequential execution time**
+
+![Sequential TSP execution time](benchmarking\graphs\Figure_1_Sequential_Execution_Time.png)
+
+**OpenMP execution time**
+
+![OpenMP TSP execution time](benchmarking\graphs\Figure_2_OpenMP_Execution_Time.png)
+
+**OpenMP thread scaling**
+
+![OpenMP thread scaling](benchmarking/graphs/Figure_3_OpenMP_Scaling_Speedup.png)
+
+**Practical sequential vs OpenMP comparison**
+
+![Practical sequential versus OpenMP comparison](benchmarking/graphs/Figure_4_Practical_Sequential_vs_Parallel.png)
+
+### Detailed Results
+
+* [Benchmarking overview](benchmarking/README.md)
+* [Performance analysis](benchmarking/analysis.md)
+* [Sequential measurements (CSV)](benchmarking/results/sequential_results.csv)
+* [OpenMP measurements (CSV)](benchmarking/results/openmp_results.csv)
+* [Thread-scaling metrics (CSV)](benchmarking/results/scaling_results.csv)
+* [Full project report](report/TSP_Combinatorial_Optimization_Report.pdf)
+
+The graphs can be regenerated from the recorded CSV files using `benchmarking/scripts/plot_results.py`; rerunning the solver is not required.
+
+---
+
 # Key Takeaways
 
 This project demonstrates how a real-world combinatorial optimization problem can be approached using both sequential and parallel computational techniques.
