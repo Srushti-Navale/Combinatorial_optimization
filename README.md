@@ -41,6 +41,17 @@ Combinatorial_optimization/
 │   ├── test_two_opt.c     # 2-Opt swap unit tests
 │   └── test_utils.c       # Distance and Hamiltonian cycle validation tests
 │
+├── benchmarking/
+│   ├── README.md                  # Benchmarking overview
+│   ├── analysis.md                # Performance analysis
+│   ├── results/                    # Benchmark data
+│   │   ├── sequential_results.csv  # Sequential results
+│   │   ├── openmp_results.csv      # OpenMP results
+│   │   └── scaling_results.csv     # Scaling metrics
+│   ├── graphs/                     # Performance graphs
+│   └── scripts/
+│       └── plot_results.py         # Generates graphs from CSVs
+│
 ├── Makefile               # Modular build configuration
 ├── .gitignore             # Build artifact and binary exclusions
 └── README.md              # Project documentation
